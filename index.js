@@ -1,3 +1,7 @@
+const DEVICE_CONFIG = {
+  baudRate: 115200
+};
+
 async function loadSVG(svgPath, targetContainerId) {
     try {
         const response = await fetch(svgPath);
@@ -13,11 +17,6 @@ async function loadSVG(svgPath, targetContainerId) {
             svgElement.style.maxHeight = '100%';
             svgElement.style.display = 'block';
             svgElement.style.margin = '0 auto';
-            
-            window.addEventListener('resize', () => {
-                adjustSvgSize(svgElement);
-            });
-            
             return svgElement;
         }
     } catch (error) {
@@ -45,10 +44,14 @@ async function findSerialDevices() {
 
 async function connectToSerial(port) {
     try {
-        await port.open({ baudRate: 9600 });
+        await port.open({ baudRate: DEVICE_CONFIG.baudRate });
         
         reader = port.readable.getReader();
         readSerialData(reader);
+        
+        port.addEventListener('disconnect', () => {
+            handleDisconnection();
+        });
         
         return port;
     } catch (error) {
@@ -61,7 +64,10 @@ async function readSerialData(reader) {
     try {
         while (true) {
             const { value, done } = await reader.read();
-            if (done) break;
+            if (done) {
+                handleDisconnection();
+                break;
+            }
 
             const text = new TextDecoder().decode(value);
             console.log('Received:', text);
@@ -69,25 +75,59 @@ async function readSerialData(reader) {
         }
     } catch (error) {
         console.error('Read Error:', error);
-        updateDeviceStatus('Read error');
+        updateDeviceStatus('Read error', true);
+        handleDisconnection();
     }
 }
 
 async function disconnectSerial() {
-    if (reader) {
-        await reader.cancel();
-        reader = null;
+    try {
+        if (reader) {
+            await reader.cancel().catch(e => console.error('Reader cancel error:', e));
+            reader = null;
+        }
+        if (serialPort) {
+            await serialPort.close().catch(e => console.error('Port close error:', e));
+            serialPort = null;
+        }
+    } catch (error) {
+        console.error('Disconnection Error:', error);
+        throw error;
     }
-    if (serialPort) {
-        await serialPort.close();
+}
+
+function handleDisconnection() {
+    const button = document.getElementById('connect-button');
+    const status = document.getElementById('device-status');
+    
+    // Обновляем UI асинхронно, но не ждем завершения
+    disconnectSerial().finally(() => {
+        button.textContent = "Find Serial Device";
+        status.textContent = "Disconnected (device lost)";
+        status.style.color = 'black';
         serialPort = null;
-    }
+        reader = null;
+    });
 }
 
 function updateDeviceStatus(message, isError = false) {
     const status = document.getElementById('device-status');
     status.textContent = message;
-    status.style.color = isError ? 'red' : 'green';
+    status.style.color = isError ? 'black' : 'green';
+}
+
+async function getDeviceName(port) {
+    try {
+        const info = port.getInfo();
+        if (info.usbProductName) return info.usbProductName;
+        if (info.usbVendorId && info.usbProductId) {
+            return `Device (VID: 0x${info.usbVendorId.toString(16)}, PID: 0x${info.usbProductId.toString(16)})`;
+        }
+        return 'Serial Device';
+    } catch (error) {
+        console.error('Error getting device name:', error);
+        return 'Serial Device';
+    }
 }
 
 async function handleConnectButton() {
@@ -108,12 +148,14 @@ async function handleConnectButton() {
         const port = await findSerialDevices();
         serialPort = await connectToSerial(port);
         
+        const deviceName = await getDeviceName(port);
         button.textContent = "Disconnect";
-        status.textContent = `Connected to: ${port.getInfo().usbProductId || 'Serial Device'}`;
+        status.textContent = `Connected to: ${deviceName}`;
     } catch (error) {
         console.error('Connection Error:', error);
         status.textContent = `Error: ${error.message}`;
-        status.style.color = 'red';
+        status.style.color = 'black';
+        button.textContent = "Find Serial Device";
     } finally {
         button.disabled = false;
     }
