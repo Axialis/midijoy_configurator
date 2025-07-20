@@ -13,10 +13,145 @@ const MsgType = {
     ERROR_DEVICE_DISCONNECTED: 6
 };
 
+// Gamepad Constants
+const DPAD = {
+  UP: 0x00,
+  RIGHT: 0x02,
+  DOWN: 0x04,
+  LEFT: 0x06,
+  NONE: 0x08
+};
+
+const BUTTONS = {
+  X: 0x10,
+  A: 0x20,
+  B: 0x40,
+  Y: 0x80,
+  LB: 0x01,
+  RB: 0x02,
+  LT: 0x04,
+  RT: 0x08,
+  BACK: 0x10,
+  START: 0x20,
+  L3: 0x40,
+  R3: 0x80
+};
+
 // Global variables
 let serialPort = null;
 let reader = null;
 let serialBuffer = new Uint8Array(0);
+let gamepadState = createGamepadState();
+
+// Gamepad Functions
+function createGamepadState() {
+  return {
+    axes: {
+      lx: 0,
+      ly: 0,
+      rx: 0,
+      ry: 0
+    },
+    dpad: {
+      direction: null,
+      raw: 0
+    },
+    buttons: {
+      x: false,
+      a: false,
+      b: false,
+      y: false,
+      lb: false,
+      rb: false,
+      lt: false,
+      rt: false,
+      back: false,
+      start: false,
+      l3: false,
+      r3: false,
+      dpadRaw: 0,
+      buttonsRaw: 0
+    }
+  };
+}
+
+function updateGamepadState(state, data) {
+  if (!data || data.length < 6) return state;
+  
+  state.axes.lx = data[0];
+  state.axes.ly = data[1];
+  state.axes.rx = data[2];
+  state.axes.ry = data[3];
+  
+  const dpadBtns = data[4];
+  state.dpad.raw = dpadBtns;
+  
+  const dpadVal = dpadBtns & 0x0F;
+  switch(dpadVal) {
+    case DPAD.UP:    state.dpad.direction = 'up'; break;
+    case DPAD.RIGHT: state.dpad.direction = 'right'; break;
+    case DPAD.DOWN:  state.dpad.direction = 'down'; break;
+    case DPAD.LEFT:  state.dpad.direction = 'left'; break;
+    case DPAD.NONE: state.dpad.direction = 'none'; break;
+    default:        state.dpad.direction = null; break;
+  }
+  
+  state.buttons.x = !!(dpadBtns & BUTTONS.X);
+  state.buttons.a = !!(dpadBtns & BUTTONS.A);
+  state.buttons.b = !!(dpadBtns & BUTTONS.B);
+  state.buttons.y = !!(dpadBtns & BUTTONS.Y);
+  
+  const buttons = data[5];
+  state.buttons.buttonsRaw = buttons;
+  
+  state.buttons.lb = !!(buttons & BUTTONS.LB);
+  state.buttons.rb = !!(buttons & BUTTONS.RB);
+  state.buttons.lt = !!(buttons & BUTTONS.LT);
+  state.buttons.rt = !!(buttons & BUTTONS.RT);
+  state.buttons.back = !!(buttons & BUTTONS.BACK);
+  state.buttons.start = !!(buttons & BUTTONS.START);
+  state.buttons.l3 = !!(buttons & BUTTONS.L3);
+  state.buttons.r3 = !!(buttons & BUTTONS.R3);
+  
+  return state;
+}
+
+function formatGamepadState(state) {
+  if (!state) return "";
+  
+  let output = [];
+  output.push(
+    `LX:${state.axes.lx.toString().padStart(3)} ` +
+    `LY:${state.axes.ly.toString().padStart(3)} ` +
+    `RX:${state.axes.rx.toString().padStart(3)} ` +
+    `RY:${state.axes.ry.toString().padStart(3)}`
+  );
+  
+  output.push(`DPAD:${state.dpad.direction ? state.dpad.direction.toUpperCase() : 'UNKNOWN'}`);
+  
+  const activeButtons = [];
+  if (state.buttons.x) activeButtons.push('X');
+  if (state.buttons.a) activeButtons.push('A');
+  if (state.buttons.b) activeButtons.push('B');
+  if (state.buttons.y) activeButtons.push('Y');
+  if (state.buttons.lb) activeButtons.push('LB');
+  if (state.buttons.rb) activeButtons.push('RB');
+  if (state.buttons.lt) activeButtons.push('LT');
+  if (state.buttons.rt) activeButtons.push('RT');
+  if (state.buttons.back) activeButtons.push('BACK');
+  if (state.buttons.start) activeButtons.push('START');
+  if (state.buttons.l3) activeButtons.push('L3');
+  if (state.buttons.r3) activeButtons.push('R3');
+  
+  output.push(`Btns:${activeButtons.join('') || 'NONE'}`);
+  
+  output.push(
+    `RAW: ${state.dpad.raw.toString(16).padStart(2, '0')} ` +
+    `${state.buttons.buttonsRaw.toString(16).padStart(2, '0')}`
+  );
+  
+  return output.join(' | ');
+}
 
 // DOM and UI Functions
 async function loadSVG(svgPath, targetContainerId) {
@@ -53,6 +188,9 @@ function displayFrame(data) {
     if (!output || data.length === 0) return;
 
     const payload = data.slice(1);
+
+    updateGamepadState(gamepadState, payload);
+    console.log(gamepadState) // Print buttons state structure
     
     let hexArray = Array.from(payload).map(b => b.toString(16).padStart(2, '0'));
     
@@ -251,6 +389,14 @@ async function getDeviceName(port) {
         return 'Serial Device';
     }
 }
+
+function setSVGElementColor(selector, color) {
+    const elements = document.querySelectorAll(selector);
+    elements.forEach(element => {
+        element.style.fill = color;
+    });
+}
+
 
 // Event Handlers
 async function handleConnectButton() {
