@@ -1,3 +1,4 @@
+// Constants
 const DEVICE_CONFIG = {
     baudRate: 115200
 };
@@ -12,6 +13,12 @@ const MsgType = {
     ERROR_DEVICE_DISCONNECTED: 6
 };
 
+// Global variables
+let serialPort = null;
+let reader = null;
+let serialBuffer = new Uint8Array(0);
+
+// DOM and UI Functions
 async function loadSVG(svgPath, targetContainerId) {
     try {
         const response = await fetch(svgPath);
@@ -35,9 +42,51 @@ async function loadSVG(svgPath, targetContainerId) {
     }
 }
 
-let serialPort = null;
-let reader = null;
+function updateDeviceStatus(message, isError = false) {
+    const status = document.getElementById('device-status');
+    status.textContent = message;
+    status.style.color = isError ? 'black' : 'green';
+}
 
+function displayFrame(data) {
+    const output = document.getElementById('output');
+    if (!output || data.length === 0) return;
+
+    const payload = data.slice(1);
+    
+    let hexArray = Array.from(payload).map(b => b.toString(16).padStart(2, '0'));
+    
+    const trimTrailingZeros = (arr) => {
+        let lastNonZero = arr.length - 1;
+        while (lastNonZero >= 0 && arr[lastNonZero] === '00') {
+            lastNonZero--;
+        }
+        return arr.slice(0, lastNonZero + 1);
+    };
+    
+    const trimmedHex = trimTrailingZeros(hexArray);
+    const hexPayload = trimmedHex.join(' ');
+    
+    const messageText = `${hexPayload}`;
+
+    const messageElement = document.createElement('div');
+    messageElement.textContent = messageText;
+
+    output.insertBefore(messageElement, output.firstChild);
+    messageElement.style.backgroundColor = '#acff9bff';
+    setTimeout(() => messageElement.style.backgroundColor = '', 100);
+
+    const maxMessages = 20;
+    if (output.children.length > maxMessages) {
+        output.removeChild(output.lastChild);
+    }
+
+    output.scrollTop = 0;
+    output.appendChild(messageElement);
+    output.scrollTop = output.scrollHeight;
+}
+
+// Serial Communication Functions
 async function findSerialDevices() {
     try {
         if (!('serial' in navigator)) {
@@ -69,9 +118,6 @@ async function connectToSerial(port) {
         throw error;
     }
 }
-
-let serialBuffer = new Uint8Array(0);
-let escapeNext = false;
 
 async function readSerialData(reader) {
     try {
@@ -143,42 +189,6 @@ function parseFrame(frame) {
     return new Uint8Array(result);
 }
 
-function getEnumKeyByValue(enumObj, value) {
-    return Object.keys(enumObj).find(key => enumObj[key] === value);
-}
-
-function displayFrame(data) {
-    const output = document.getElementById('output');
-    if (!output || data.length === 0) return;
-
-    const messageType = getEnumKeyByValue(MsgType, data[0]);
-    const payload = data.slice(1);
-    const hexPayload = Array.from(payload).map(b => b.toString(16).padStart(2, '0')).join(' ');
-    const messageText = `${messageType}: ${hexPayload}`;
-
-    const messageElement = document.createElement('div');
-    messageElement.textContent = messageText;
-
-    output.insertBefore(messageElement, output.firstChild);
-    messageElement.style.backgroundColor = '#acff9bff';
-    setTimeout(() => messageElement.style.backgroundColor = '', 100);
-
-    const maxMessages = 20;
-    if (output.children.length > maxMessages) {
-        output.removeChild(output.lastChild);
-    }
-
-    output.scrollTop = 0;
-    output.appendChild(messageElement);
-    output.scrollTop = output.scrollHeight;
-}
-
-function bytesToHex(bytes) {
-    return Array.from(bytes)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join(' ');
-}
-
 async function disconnectSerial() {
     try {
         if (reader) {
@@ -208,10 +218,24 @@ function handleDisconnection() {
     });
 }
 
-function updateDeviceStatus(message, isError = false) {
-    const status = document.getElementById('device-status');
-    status.textContent = message;
-    status.style.color = isError ? 'black' : 'green';
+// Helper Functions
+function trimTrailingZeros(hexArray) {
+    let lastNonZeroIndex = hexArray.length - 1;
+    while (lastNonZeroIndex >= 0 && hexArray[lastNonZeroIndex] === '00') {
+        lastNonZeroIndex--;
+    }
+    
+    return hexArray.slice(0, lastNonZeroIndex + 1);
+}
+
+function getEnumKeyByValue(enumObj, value) {
+    return Object.keys(enumObj).find(key => enumObj[key] === value);
+}
+
+function bytesToHex(bytes) {
+    return Array.from(bytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join(' ');
 }
 
 async function getDeviceName(port) {
@@ -228,6 +252,7 @@ async function getDeviceName(port) {
     }
 }
 
+// Event Handlers
 async function handleConnectButton() {
     const button = document.getElementById('connect-button');
     const status = document.getElementById('device-status');
@@ -259,6 +284,7 @@ async function handleConnectButton() {
     }
 }
 
+// Initialization
 document.addEventListener('DOMContentLoaded', async () => {
     const svg = await loadSVG('assets/images/joy.svg', 'svg-container');
 

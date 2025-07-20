@@ -1,19 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="Web interface for configuring MIDI signal generation using Logitech F310 game controller. Map joystick inputs to MIDI commands and customize control parameters.">
-    <meta name="keywords"
-        content="MIDI controller, Logitech F310, joystick MIDI, music controller, gamepad MIDI, DIY MIDI, MIDI configuration">
+    <meta name="description" content="Web interface for configuring MIDI signal generation using Logitech F310 game controller. Map joystick inputs to MIDI commands and customize control parameters.">
+    <meta name="keywords" content="MIDI controller, Logitech F310, joystick MIDI, music controller, gamepad MIDI, DIY MIDI, MIDI configuration">
     <meta name="author" content="Alexander Semenkov">
 
     <!-- Open Graph / Social Media -->
     <meta property="og:title" content="F310 MIDI Configurator | Transform Gamepad into Music Controller">
-    <meta property="og:description"
-        content="Configure your Logitech F310 game controller as a customizable MIDI device for music production">
+    <meta property="og:description" content="Configure your Logitech F310 game controller as a customizable MIDI device for music production">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://axialis.github.io/midijoy_configurator/">
     <!-- <meta property="og:image" content="https://axialis.github.io/midijoy_configurator/images/social-preview.jpg"> -->
@@ -83,7 +79,7 @@
             border-radius: 10px 10px 0 0;
             box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
             margin-top: auto;
-            flex-shrink: 0;/
+            flex-shrink: 0;
         }
 
         .device-info {
@@ -113,19 +109,22 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
+
+        #output::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <div class="main-container">
         <div id="svg-container" class="joystick-svg-wrapper"></div>
-        <div id="output" style="
-            font-family: monospace; 
-            white-space: pre; 
-            height: 300px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-        "></div>
+        <div id="output" style="font-family: monospace; 
+                              white-space: pre; 
+                              height: 300px;
+                              max-width: 600px;
+                              overflow-y: auto;
+                              margin-bottom: 15px;"></div>
         <div class="control-panel">
             <div id="device-status" class="device-info">
                 Device not connected
@@ -138,5 +137,4 @@
 
     <script src="index.js"></script>
 </body>
-
 </html>
