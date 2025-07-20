@@ -1,16 +1,26 @@
 const DEVICE_CONFIG = {
-  baudRate: 115200
+    baudRate: 115200
+};
+
+const MsgType = {
+    UPDATE_CONFIGURATION: 0,
+    CURRENT_CONFIGURATION: 1,
+    ERROR_FIFO_READ: 2,
+    ERROR_PACKING_FAILED: 3,
+    ERROR_TRANSPORT_FAILED: 4,
+    ERROR_INVALID_DATA: 5,
+    ERROR_DEVICE_DISCONNECTED: 6
 };
 
 async function loadSVG(svgPath, targetContainerId) {
     try {
         const response = await fetch(svgPath);
         if (!response.ok) throw new Error('SVG load failed');
-        
+
         const svgText = await response.text();
         const container = document.getElementById(targetContainerId);
         container.innerHTML = svgText;
-        
+
         const svgElement = container.querySelector('svg');
         if (svgElement) {
             svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
@@ -33,7 +43,7 @@ async function findSerialDevices() {
         if (!('serial' in navigator)) {
             throw new Error('Web Serial API not supported in your browser');
         }
-        
+
         const port = await navigator.serial.requestPort();
         return port;
     } catch (error) {
@@ -45,20 +55,23 @@ async function findSerialDevices() {
 async function connectToSerial(port) {
     try {
         await port.open({ baudRate: DEVICE_CONFIG.baudRate });
-        
+
         reader = port.readable.getReader();
         readSerialData(reader);
-        
+
         port.addEventListener('disconnect', () => {
             handleDisconnection();
         });
-        
+
         return port;
     } catch (error) {
         console.error('Connection Error:', error);
         throw error;
     }
 }
+
+let serialBuffer = new Uint8Array(0);
+let escapeNext = false;
 
 async function readSerialData(reader) {
     try {
@@ -69,15 +82,101 @@ async function readSerialData(reader) {
                 break;
             }
 
-            const text = new TextDecoder().decode(value);
-            console.log('Received:', text);
-            updateDeviceStatus(`Data: ${text}`);
+            const newData = new Uint8Array(value);
+            const tempBuffer = new Uint8Array(serialBuffer.length + newData.length);
+            tempBuffer.set(serialBuffer);
+            tempBuffer.set(newData, serialBuffer.length);
+            serialBuffer = tempBuffer;
+
+            processBuffer();
         }
     } catch (error) {
         console.error('Read Error:', error);
         updateDeviceStatus('Read error', true);
         handleDisconnection();
     }
+}
+
+function processBuffer() {
+    const startIndex = serialBuffer.indexOf(0x7E);
+    if (startIndex === -1) {
+        serialBuffer = new Uint8Array(0);
+        return;
+    }
+
+    serialBuffer = serialBuffer.slice(startIndex);
+    let endIndex = -1;
+    let i = 1;
+    while (i < serialBuffer.length) {
+        if (serialBuffer[i] === 0x7D) { // ESCAPE_CHAR
+            i += 2;
+        } else if (serialBuffer[i] === 0x7F) {
+            endIndex = i;
+            break;
+        } else {
+            i++;
+        }
+    }
+
+    if (endIndex === -1) return;
+
+    const frame = serialBuffer.slice(1, endIndex);
+    serialBuffer = serialBuffer.slice(endIndex + 1);
+
+    const parsedData = parseFrame(frame);
+    displayFrame(parsedData);
+}
+
+function parseFrame(frame) {
+    const result = [];
+    let i = 0;
+    while (i < frame.length) {
+        if (frame[i] === 0x7D) { // ESCAPE_CHAR
+            if (i + 1 >= frame.length) break;
+            result.push(frame[i + 1] ^ 0x20); // XOR_VALUE = 0x20
+            i += 2;
+        } else {
+            result.push(frame[i]);
+            i++;
+        }
+    }
+    return new Uint8Array(result);
+}
+
+function getEnumKeyByValue(enumObj, value) {
+    return Object.keys(enumObj).find(key => enumObj[key] === value);
+}
+
+function displayFrame(data) {
+    const output = document.getElementById('output');
+    if (!output || data.length === 0) return;
+
+    const messageType = getEnumKeyByValue(MsgType, data[0]);
+    const payload = data.slice(1);
+    const hexPayload = Array.from(payload).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    const messageText = `${messageType}: ${hexPayload}`;
+
+    const messageElement = document.createElement('div');
+    messageElement.textContent = messageText;
+
+    output.insertBefore(messageElement, output.firstChild);
+    messageElement.style.backgroundColor = '#acff9bff';
+    setTimeout(() => messageElement.style.backgroundColor = '', 100);
+
+    const maxMessages = 20;
+    if (output.children.length > maxMessages) {
+        output.removeChild(output.lastChild);
+    }
+
+    output.scrollTop = 0;
+    output.appendChild(messageElement);
+    output.scrollTop = output.scrollHeight;
+}
+
+function bytesToHex(bytes) {
+    return Array.from(bytes)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join(' ');
 }
 
 async function disconnectSerial() {
@@ -99,8 +198,7 @@ async function disconnectSerial() {
 function handleDisconnection() {
     const button = document.getElementById('connect-button');
     const status = document.getElementById('device-status');
-    
-    // Обновляем UI асинхронно, но не ждем завершения
+
     disconnectSerial().finally(() => {
         button.textContent = "Find Serial Device";
         status.textContent = "Disconnected (device lost)";
@@ -133,7 +231,7 @@ async function getDeviceName(port) {
 async function handleConnectButton() {
     const button = document.getElementById('connect-button');
     const status = document.getElementById('device-status');
-    
+
     try {
         if (serialPort) {
             await disconnectSerial();
@@ -141,13 +239,13 @@ async function handleConnectButton() {
             status.textContent = "Disconnected";
             return;
         }
-        
+
         button.disabled = true;
         status.textContent = "Select serial device...";
-        
+
         const port = await findSerialDevices();
         serialPort = await connectToSerial(port);
-        
+
         const deviceName = await getDeviceName(port);
         button.textContent = "Disconnect";
         status.textContent = `Connected to: ${deviceName}`;
@@ -163,12 +261,12 @@ async function handleConnectButton() {
 
 document.addEventListener('DOMContentLoaded', async () => {
     const svg = await loadSVG('assets/images/joy.svg', 'svg-container');
-    
+
     const connectButton = document.getElementById('connect-button');
     connectButton.addEventListener('click', handleConnectButton);
-    
+
     if (!('serial' in navigator)) {
-        document.getElementById('device-status').textContent = 
+        document.getElementById('device-status').textContent =
             "Web Serial API not supported in this browser";
         connectButton.disabled = true;
     }
