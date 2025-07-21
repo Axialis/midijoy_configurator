@@ -124,7 +124,44 @@ function updateGamepadState(state, data) {
     state.buttons.r3 = !!(buttons & BUTTONS.R3);
 
     updateSVGColors(state);
+    updateJoystickPositions(state);
     return state;
+}
+
+function updateJoystickPositions(state) {
+    const lx = (state.axes.lx - 128) / 128;
+    const ly = (state.axes.ly - 128) / 128;
+    const rx = (state.axes.rx - 128) / 128;
+    const ry = (state.axes.ry - 128) / 128;
+
+    const l3Element = document.querySelector('.l3');
+    const r3Element = document.querySelector('.r3');
+    
+    if (l3Element) {
+        const l3Center = getCenter(l3Element);
+        const leftIndicator = document.querySelector('#left-joystick-indicator');
+        if (leftIndicator) {
+            leftIndicator.setAttribute('cx', l3Center.x + lx * 60);
+            leftIndicator.setAttribute('cy', l3Center.y + ly * 60);
+        }
+    }
+
+    if (r3Element) {
+        const r3Center = getCenter(r3Element);
+        const rightIndicator = document.querySelector('#right-joystick-indicator');
+        if (rightIndicator) {
+            rightIndicator.setAttribute('cx', r3Center.x + rx * 60);
+            rightIndicator.setAttribute('cy', r3Center.y + ry * 60);
+        }
+    }
+}
+
+function getCenter(element) {
+    const bbox = element.getBBox();
+    return {
+        x: bbox.x + bbox.width / 2,
+        y: bbox.y + bbox.height / 2
+    };
 }
 
 function formatGamepadState(state) {
@@ -536,10 +573,36 @@ async function handleConnectButton() {
     }
 }
 
+function ensureJoystickIndicatorsExist() {
+    const svgDoc = document.querySelector('svg');
+    if (!svgDoc) return;
+
+    const leftIndicatorExists = svgDoc.querySelector('#left-joystick-indicator');
+    const rightIndicatorExists = svgDoc.querySelector('#right-joystick-indicator');
+
+    if (!leftIndicatorExists) {
+        const leftIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        leftIndicator.id = 'left-joystick-indicator';
+        leftIndicator.setAttribute('class', 'joystick-indicator');
+        leftIndicator.setAttribute('r', '10');
+        leftIndicator.setAttribute('fill', 'rgba(255, 255, 255, 0.7)');
+        svgDoc.appendChild(leftIndicator);
+    }
+
+    if (!rightIndicatorExists) {
+        const rightIndicator = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        rightIndicator.id = 'right-joystick-indicator';
+        rightIndicator.setAttribute('class', 'joystick-indicator');
+        rightIndicator.setAttribute('r', '10');
+        rightIndicator.setAttribute('fill', 'rgba(255, 255, 255, 0.7)');
+        svgDoc.appendChild(rightIndicator);
+    }
+}
+
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
     const svg = await loadSVG('assets/images/joy.svg', 'svg-container');
-
+ensureJoystickIndicatorsExist();
     const connectButton = document.getElementById('connect-button');
     connectButton.addEventListener('click', handleConnectButton);
 
