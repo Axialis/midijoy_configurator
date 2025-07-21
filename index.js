@@ -15,11 +15,15 @@ const MsgType = {
 
 // Gamepad Constants
 const DPAD = {
-  UP: 0x00,
-  RIGHT: 0x02,
-  DOWN: 0x04,
-  LEFT: 0x06,
-  NONE: 0x08
+  UP:         0x00,
+  UP_RIGHT:   0x01,
+  RIGHT:      0x02,
+  DOWN_RIGHT: 0x03,
+  DOWN:       0x04,
+  DOWN_LEFT:  0x05,
+  LEFT:       0x06,
+  UP_LEFT:    0x07,
+  NONE:       0x08
 };
 
 const BUTTONS = {
@@ -88,12 +92,16 @@ function updateGamepadState(state, data) {
   
   const dpadVal = dpadBtns & 0x0F;
   switch(dpadVal) {
-    case DPAD.UP:    state.dpad.direction = 'up'; break;
-    case DPAD.RIGHT: state.dpad.direction = 'right'; break;
-    case DPAD.DOWN:  state.dpad.direction = 'down'; break;
-    case DPAD.LEFT:  state.dpad.direction = 'left'; break;
-    case DPAD.NONE: state.dpad.direction = 'none'; break;
-    default:        state.dpad.direction = null; break;
+    case DPAD.UP:         state.dpad.direction = 'up'; break;
+    case DPAD.UP_RIGHT:   state.dpad.direction = 'up-right'; break;
+    case DPAD.RIGHT:      state.dpad.direction = 'right'; break;
+    case DPAD.DOWN_RIGHT: state.dpad.direction = 'down-right'; break;
+    case DPAD.DOWN:       state.dpad.direction = 'down'; break;
+    case DPAD.DOWN_LEFT:  state.dpad.direction = 'down-left'; break;
+    case DPAD.LEFT:       state.dpad.direction = 'left'; break;
+    case DPAD.UP_LEFT:    state.dpad.direction = 'up-left'; break;
+    case DPAD.NONE:       state.dpad.direction = 'none'; break;
+    default:              state.dpad.direction = null; break;
   }
   
   state.buttons.x = !!(dpadBtns & BUTTONS.X);
@@ -127,7 +135,20 @@ function formatGamepadState(state) {
     `RY:${state.axes.ry.toString().padStart(3)}`
   );
   
-  output.push(`DPAD:${state.dpad.direction ? state.dpad.direction.toUpperCase() : 'UNKNOWN'}`);
+  const directionNames = {
+    'up': 'UP',
+    'up-right': 'UP-RIGHT',
+    'right': 'RIGHT',
+    'down-right': 'DOWN-RIGHT',
+    'down': 'DOWN',
+    'down-left': 'DOWN-LEFT',
+    'left': 'LEFT',
+    'up-left': 'UP-LEFT',
+    'none': 'NONE',
+    null: 'UNKNOWN'
+  };
+  
+  output.push(`DPAD:${directionNames[state.dpad.direction]}`);
   
   const activeButtons = [];
   if (state.buttons.x) activeButtons.push('X');
@@ -188,10 +209,6 @@ function displayFrame(data) {
     if (!output || data.length === 0) return;
 
     const payload = data.slice(1);
-
-    updateGamepadState(gamepadState, payload);
-    console.log(gamepadState) // Print buttons state structure
-    
     let hexArray = Array.from(payload).map(b => b.toString(16).padStart(2, '0'));
     
     const trimTrailingZeros = (arr) => {
@@ -309,6 +326,9 @@ function processBuffer() {
 
     const parsedData = parseFrame(frame);
     displayFrame(parsedData);
+    
+    updateGamepadState(gamepadState, parsedData.slice(1));
+    console.log(gamepadState) // Print buttons state structure
 }
 
 function parseFrame(frame) {
