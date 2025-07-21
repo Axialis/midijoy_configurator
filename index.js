@@ -15,31 +15,32 @@ const MsgType = {
 
 // Gamepad Constants
 const DPAD = {
-  UP:         0x00,
-  UP_RIGHT:   0x01,
-  RIGHT:      0x02,
-  DOWN_RIGHT: 0x03,
-  DOWN:       0x04,
-  DOWN_LEFT:  0x05,
-  LEFT:       0x06,
-  UP_LEFT:    0x07,
-  NONE:       0x08
+    UP: 0x00,
+    UP_RIGHT: 0x01,
+    RIGHT: 0x02,
+    DOWN_RIGHT: 0x03,
+    DOWN: 0x04,
+    DOWN_LEFT: 0x05,
+    LEFT: 0x06,
+    UP_LEFT: 0x07,
+    NONE: 0x08
 };
 
 const BUTTONS = {
-  X: 0x10,
-  A: 0x20,
-  B: 0x40,
-  Y: 0x80,
-  LB: 0x01,
-  RB: 0x02,
-  LT: 0x04,
-  RT: 0x08,
-  BACK: 0x10,
-  START: 0x20,
-  L3: 0x40,
-  R3: 0x80
+    X: 0x10,
+    A: 0x20,
+    B: 0x40,
+    Y: 0x80,
+    LB: 0x01,
+    RB: 0x02,
+    LT: 0x04,
+    RT: 0x08,
+    BACK: 0x10,
+    START: 0x20,
+    L3: 0x40,
+    R3: 0x80
 };
+
 
 // Global variables
 let serialPort = null;
@@ -49,129 +50,131 @@ let gamepadState = createGamepadState();
 
 // Gamepad Functions
 function createGamepadState() {
-  return {
-    axes: {
-      lx: 0,
-      ly: 0,
-      rx: 0,
-      ry: 0
-    },
-    dpad: {
-      direction: null,
-      raw: 0
-    },
-    buttons: {
-      x: false,
-      a: false,
-      b: false,
-      y: false,
-      lb: false,
-      rb: false,
-      lt: false,
-      rt: false,
-      back: false,
-      start: false,
-      l3: false,
-      r3: false,
-      dpadRaw: 0,
-      buttonsRaw: 0
-    }
-  };
+    return {
+        axes: {
+            lx: 0,
+            ly: 0,
+            rx: 0,
+            ry: 0
+        },
+        dpad: {
+            direction: null,
+            raw: 0
+        },
+        buttons: {
+            x: false,
+            a: false,
+            b: false,
+            y: false,
+            lb: false,
+            rb: false,
+            lt: false,
+            rt: false,
+            back: false,
+            start: false,
+            mode: false,
+            l3: false,
+            r3: false,
+            dpadRaw: 0,
+            buttonsRaw: 0
+        }
+    };
 }
 
 function updateGamepadState(state, data) {
-  if (!data || data.length < 6) return state;
-  
-  state.axes.lx = data[0];
-  state.axes.ly = data[1];
-  state.axes.rx = data[2];
-  state.axes.ry = data[3];
-  
-  const dpadBtns = data[4];
-  state.dpad.raw = dpadBtns;
-  
-  const dpadVal = dpadBtns & 0x0F;
-  switch(dpadVal) {
-    case DPAD.UP:         state.dpad.direction = 'up'; break;
-    case DPAD.UP_RIGHT:   state.dpad.direction = 'up-right'; break;
-    case DPAD.RIGHT:      state.dpad.direction = 'right'; break;
-    case DPAD.DOWN_RIGHT: state.dpad.direction = 'down-right'; break;
-    case DPAD.DOWN:       state.dpad.direction = 'down'; break;
-    case DPAD.DOWN_LEFT:  state.dpad.direction = 'down-left'; break;
-    case DPAD.LEFT:       state.dpad.direction = 'left'; break;
-    case DPAD.UP_LEFT:    state.dpad.direction = 'up-left'; break;
-    case DPAD.NONE:       state.dpad.direction = 'none'; break;
-    default:              state.dpad.direction = null; break;
-  }
-  
-  state.buttons.x = !!(dpadBtns & BUTTONS.X);
-  state.buttons.a = !!(dpadBtns & BUTTONS.A);
-  state.buttons.b = !!(dpadBtns & BUTTONS.B);
-  state.buttons.y = !!(dpadBtns & BUTTONS.Y);
-  
-  const buttons = data[5];
-  state.buttons.buttonsRaw = buttons;
-  
-  state.buttons.lb = !!(buttons & BUTTONS.LB);
-  state.buttons.rb = !!(buttons & BUTTONS.RB);
-  state.buttons.lt = !!(buttons & BUTTONS.LT);
-  state.buttons.rt = !!(buttons & BUTTONS.RT);
-  state.buttons.back = !!(buttons & BUTTONS.BACK);
-  state.buttons.start = !!(buttons & BUTTONS.START);
-  state.buttons.l3 = !!(buttons & BUTTONS.L3);
-  state.buttons.r3 = !!(buttons & BUTTONS.R3);
-  
-  return state;
+    if (!data || data.length < 6) return state;
+
+    state.axes.lx = data[0];
+    state.axes.ly = data[1];
+    state.axes.rx = data[2];
+    state.axes.ry = data[3];
+
+    const dpadBtns = data[4];
+    state.dpad.raw = dpadBtns;
+
+    const dpadVal = dpadBtns & 0x0F;
+    switch (dpadVal) {
+        case DPAD.UP: state.dpad.direction = 'up'; break;
+        case DPAD.UP_RIGHT: state.dpad.direction = 'up-right'; break;
+        case DPAD.RIGHT: state.dpad.direction = 'right'; break;
+        case DPAD.DOWN_RIGHT: state.dpad.direction = 'down-right'; break;
+        case DPAD.DOWN: state.dpad.direction = 'down'; break;
+        case DPAD.DOWN_LEFT: state.dpad.direction = 'down-left'; break;
+        case DPAD.LEFT: state.dpad.direction = 'left'; break;
+        case DPAD.UP_LEFT: state.dpad.direction = 'up-left'; break;
+        case DPAD.NONE: state.dpad.direction = 'none'; break;
+        default: state.dpad.direction = null; break;
+    }
+
+    state.buttons.x = !!(dpadBtns & BUTTONS.X);
+    state.buttons.a = !!(dpadBtns & BUTTONS.A);
+    state.buttons.b = !!(dpadBtns & BUTTONS.B);
+    state.buttons.y = !!(dpadBtns & BUTTONS.Y);
+
+    const buttons = data[5];
+    state.buttons.buttonsRaw = buttons;
+
+    state.buttons.lb = !!(buttons & BUTTONS.LB);
+    state.buttons.rb = !!(buttons & BUTTONS.RB);
+    state.buttons.lt = !!(buttons & BUTTONS.LT);
+    state.buttons.rt = !!(buttons & BUTTONS.RT);
+    state.buttons.back = !!(buttons & BUTTONS.BACK);
+    state.buttons.start = !!(buttons & BUTTONS.START);
+    state.buttons.l3 = !!(buttons & BUTTONS.L3);
+    state.buttons.r3 = !!(buttons & BUTTONS.R3);
+
+    updateSVGColors(state);
+    return state;
 }
 
 function formatGamepadState(state) {
-  if (!state) return "";
-  
-  let output = [];
-  output.push(
-    `LX:${state.axes.lx.toString().padStart(3)} ` +
-    `LY:${state.axes.ly.toString().padStart(3)} ` +
-    `RX:${state.axes.rx.toString().padStart(3)} ` +
-    `RY:${state.axes.ry.toString().padStart(3)}`
-  );
-  
-  const directionNames = {
-    'up': 'UP',
-    'up-right': 'UP-RIGHT',
-    'right': 'RIGHT',
-    'down-right': 'DOWN-RIGHT',
-    'down': 'DOWN',
-    'down-left': 'DOWN-LEFT',
-    'left': 'LEFT',
-    'up-left': 'UP-LEFT',
-    'none': 'NONE',
-    null: 'UNKNOWN'
-  };
-  
-  output.push(`DPAD:${directionNames[state.dpad.direction]}`);
-  
-  const activeButtons = [];
-  if (state.buttons.x) activeButtons.push('X');
-  if (state.buttons.a) activeButtons.push('A');
-  if (state.buttons.b) activeButtons.push('B');
-  if (state.buttons.y) activeButtons.push('Y');
-  if (state.buttons.lb) activeButtons.push('LB');
-  if (state.buttons.rb) activeButtons.push('RB');
-  if (state.buttons.lt) activeButtons.push('LT');
-  if (state.buttons.rt) activeButtons.push('RT');
-  if (state.buttons.back) activeButtons.push('BACK');
-  if (state.buttons.start) activeButtons.push('START');
-  if (state.buttons.l3) activeButtons.push('L3');
-  if (state.buttons.r3) activeButtons.push('R3');
-  
-  output.push(`Btns:${activeButtons.join('') || 'NONE'}`);
-  
-  output.push(
-    `RAW: ${state.dpad.raw.toString(16).padStart(2, '0')} ` +
-    `${state.buttons.buttonsRaw.toString(16).padStart(2, '0')}`
-  );
-  
-  return output.join(' | ');
+    if (!state) return "";
+
+    let output = [];
+    output.push(
+        `LX:${state.axes.lx.toString().padStart(3)} ` +
+        `LY:${state.axes.ly.toString().padStart(3)} ` +
+        `RX:${state.axes.rx.toString().padStart(3)} ` +
+        `RY:${state.axes.ry.toString().padStart(3)}`
+    );
+
+    const directionNames = {
+        'up': 'UP',
+        'up-right': 'UP-RIGHT',
+        'right': 'RIGHT',
+        'down-right': 'DOWN-RIGHT',
+        'down': 'DOWN',
+        'down-left': 'DOWN-LEFT',
+        'left': 'LEFT',
+        'up-left': 'UP-LEFT',
+        'none': 'NONE',
+        null: 'UNKNOWN'
+    };
+
+    output.push(`DPAD:${directionNames[state.dpad.direction]}`);
+
+    const activeButtons = [];
+    if (state.buttons.x) activeButtons.push('X');
+    if (state.buttons.a) activeButtons.push('A');
+    if (state.buttons.b) activeButtons.push('B');
+    if (state.buttons.y) activeButtons.push('Y');
+    if (state.buttons.lb) activeButtons.push('LB');
+    if (state.buttons.rb) activeButtons.push('RB');
+    if (state.buttons.lt) activeButtons.push('LT');
+    if (state.buttons.rt) activeButtons.push('RT');
+    if (state.buttons.back) activeButtons.push('BACK');
+    if (state.buttons.start) activeButtons.push('START');
+    if (state.buttons.l3) activeButtons.push('L3');
+    if (state.buttons.r3) activeButtons.push('R3');
+
+    output.push(`Btns:${activeButtons.join('') || 'NONE'}`);
+
+    output.push(
+        `RAW: ${state.dpad.raw.toString(16).padStart(2, '0')} ` +
+        `${state.buttons.buttonsRaw.toString(16).padStart(2, '0')}`
+    );
+
+    return output.join(' | ');
 }
 
 // DOM and UI Functions
@@ -210,7 +213,7 @@ function displayFrame(data) {
 
     const payload = data.slice(1);
     let hexArray = Array.from(payload).map(b => b.toString(16).padStart(2, '0'));
-    
+
     const trimTrailingZeros = (arr) => {
         let lastNonZero = arr.length - 1;
         while (lastNonZero >= 0 && arr[lastNonZero] === '00') {
@@ -218,10 +221,10 @@ function displayFrame(data) {
         }
         return arr.slice(0, lastNonZero + 1);
     };
-    
+
     const trimmedHex = trimTrailingZeros(hexArray);
     const hexPayload = trimmedHex.join(' ');
-    
+
     const messageText = `${hexPayload}`;
 
     const messageElement = document.createElement('div');
@@ -326,7 +329,7 @@ function processBuffer() {
 
     const parsedData = parseFrame(frame);
     displayFrame(parsedData);
-    
+
     updateGamepadState(gamepadState, parsedData.slice(1));
     console.log(gamepadState) // Print buttons state structure
 }
@@ -382,7 +385,7 @@ function trimTrailingZeros(hexArray) {
     while (lastNonZeroIndex >= 0 && hexArray[lastNonZeroIndex] === '00') {
         lastNonZeroIndex--;
     }
-    
+
     return hexArray.slice(0, lastNonZeroIndex + 1);
 }
 
@@ -410,11 +413,94 @@ async function getDeviceName(port) {
     }
 }
 
-function setSVGElementColor(selector, color) {
-    const elements = document.querySelectorAll(selector);
-    elements.forEach(element => {
-        element.style.fill = color;
+function updateSVGColors(state) {
+    if (!state || !state.buttons) return;
+
+    // Кнопка Y (желтый)
+    const yElements = document.querySelectorAll('.st52');
+    yElements.forEach(el => {
+        el.style.fill = state.buttons.y ? '#fff388ff' : '#edbf00';
     });
+
+    const aElements = document.querySelectorAll('.st82');
+    aElements.forEach(el => {
+        el.style.fill = state.buttons.a ? '#65ff6aff' : '#00aa04';
+    });
+
+    const bElements = document.querySelectorAll('.st178');
+    bElements.forEach(el => {
+        el.style.fill = state.buttons.b ? '#ff847cff' : '#bd0310ff';
+    });
+
+    const xElements = document.querySelectorAll('.st193');
+    xElements.forEach(el => {
+        el.style.fill = state.buttons.x ? '#73c0ffff' : '#156aff';
+    });
+
+    const lbElements = document.querySelectorAll('.lb');
+    lbElements.forEach(el => {
+        el.style.fill = state.buttons.lb ? '#bd0310ff' : '#c6c6c5';
+    });
+
+    const rbElements = document.querySelectorAll('.rb');
+    rbElements.forEach(el => {
+        el.style.fill = state.buttons.rb ? '#bd0310ff' : '#c6c6c5';
+    });
+
+    const backElements = document.querySelectorAll('.back');
+    backElements.forEach(el => {
+        el.style.fill = state.buttons.back ? '#bd0310ff' : '#6d6a6a';
+    });
+
+    const startElements = document.querySelectorAll('.start');
+    startElements.forEach(el => {
+        el.style.fill = state.buttons.start ? '#bd0310ff' : '#6d6a6a';
+    });
+
+    const modeElements = document.querySelectorAll('.mode');
+    modeElements.forEach(el => {
+        el.style.fill = state.buttons.mode ? '#bd0310ff' : '#6d6a6a';
+    });
+
+    const l3Elements = document.querySelectorAll('.l3');
+    l3Elements.forEach(el => {
+        el.style.fill = state.buttons.l3 ? '#bd0310ff' : '#6d6a6a';
+    });
+
+    const r3Elements = document.querySelectorAll('.r3');
+    r3Elements.forEach(el => {
+        el.style.fill = state.buttons.r3 ? '#bd0310ff' : '#6d6a6a';
+    });
+
+    updateDPadColors(state.dpad.direction);
+
+}
+
+function updateDPadColors(direction) {
+    const directions = ['up', 'down', 'left', 'right'];
+
+    directions.forEach(dir => {
+        const elements = document.querySelectorAll(`.dpad-${dir}`);
+        elements.forEach(el => {
+            el.style.fill = '#717170';
+        });
+    });
+
+    if (direction && direction !== 'none') {
+        const activeDirections = [];
+
+        if (direction.includes('up')) activeDirections.push('up');
+        if (direction.includes('down')) activeDirections.push('down');
+        if (direction.includes('left')) activeDirections.push('left');
+        if (direction.includes('right')) activeDirections.push('right');
+
+        activeDirections.forEach(dir => {
+            const activeElements = document.querySelectorAll(`.dpad-${dir}`);
+            activeElements.forEach(el => {
+                el.style.fill = '#ffffff';
+            });
+        });
+    }
 }
 
 
