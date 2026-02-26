@@ -40,7 +40,8 @@
             margin: 0;
             padding: 0;
             height: 100%;
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
             font-family: Arial, sans-serif;
         }
 
@@ -55,7 +56,7 @@
         }
 
         .joystick-svg-wrapper {
-            height: 80vh;
+            height: 50vh;
             width: auto;
             max-width: 100%;
             display: flex;
@@ -118,15 +119,222 @@
         #output::-webkit-scrollbar {
             display: none;
         }
+
+        .button-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .config-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .config-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+
+        .config-button.save {
+            background-color: #2196F3;
+            color: white;
+        }
+
+        .config-button.save:hover:not(:disabled) {
+            background-color: #1976D2;
+        }
+
+        .config-button.reset {
+            background-color: #ff9800;
+            color: white;
+        }
+
+        .config-button.reset:hover:not(:disabled) {
+            background-color: #f57c00;
+        }
+
+        .config-button.read {
+            background-color: #9c27b0;
+            color: white;
+        }
+
+        .config-button.read:hover:not(:disabled) {
+            background-color: #7b1fa2;
+        }
+
+        /* Configuration Panel */
+        .config-panel {
+            position: fixed;
+            right: 0;
+            top: 0;
+            width: 30vw;
+            height: 100vh;
+            background: #2d2d2d;
+            color: #fff;
+            box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+            overflow-y: auto;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .config-panel.open {
+            transform: translateX(0);
+        }
+
+        .config-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #444;
+        }
+
+        .config-panel-header h2 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .close-panel-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0 5px;
+        }
+
+        .config-section {
+            padding: 15px;
+            border-bottom: 1px solid #444;
+        }
+
+        .config-section h3 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #aaa;
+            text-transform: uppercase;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .config-item label {
+            font-size: 13px;
+        }
+
+        .config-item select {
+            width: 140px;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: #3d3d3d;
+            color: #fff;
+            font-size: 12px;
+        }
+
+        .config-item input[type="number"] {
+            width: 60px;
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: #3d3d3d;
+            color: #fff;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .toggle-panel-btn {
+            position: fixed;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px 0 0 5px;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 999;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+        }
+
+        .toggle-panel-btn:hover {
+            background: #45a049;
+        }
+
+        .help-btn {
+            position: fixed;
+            left: 15px;
+            top: 15px;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            z-index: 999;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .help-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .help-btn:active {
+            transform: scale(0.95);
+        }
+
+        .channel-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #1a1a1a;
+        }
+
+        .channel-selector label {
+            font-size: 13px;
+        }
+
+        .channel-selector select {
+            flex: 1;
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #555;
+            background: #3d3d3d;
+            color: #fff;
+        }
     </style>
 </head>
 
 <body>
     <div class="main-container">
         <div id="svg-container" class="joystick-svg-wrapper"></div>
-        <div id="output" style="font-family: monospace; 
-                              white-space: pre; 
-                              height: 300px;
+        <div id="output" style="font-family: monospace;
+                              white-space: pre;
+                              max-height: 150px;
                               max-width: 600px;
                               overflow-y: auto;
                               margin-bottom: 15px;"></div>
@@ -134,8 +342,169 @@
             <div id="device-status" class="device-info">
                 Device not connected
             </div>
-            <button id="connect-button" class="connect-button">
-                Find MIDI Device
+            <div id="firmware-version" class="device-info" style="font-size: 12px; color: #666;">
+            </div>
+            <div class="button-row">
+                <button id="connect-button" class="connect-button">
+                    Find MIDI Device
+                </button>
+            </div>
+            <div class="button-row">
+                <button id="read-config-button" class="config-button read" disabled>
+                    Read Config
+                </button>
+                <button id="save-config-button" class="config-button save" disabled>
+                    Save to Flash
+                </button>
+                <button id="reset-config-button" class="config-button reset" disabled>
+                    Reset Defaults
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help button -->
+    <a href="help.html" class="help-btn" title="Инструкция">?</a>
+
+    <!-- Toggle button for config panel -->
+    <button id="toggle-panel-btn" class="toggle-panel-btn">Settings</button>
+
+    <!-- Configuration Panel -->
+    <div id="config-panel" class="config-panel">
+        <div class="config-panel-header">
+            <h2>MIDI Configuration</h2>
+            <button id="close-panel-btn" class="close-panel-btn">&times;</button>
+        </div>
+
+        <div class="channel-selector">
+            <label for="midi-channel">MIDI Channel:</label>
+            <select id="midi-channel">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+                <option value="13">13</option>
+                <option value="14">14</option>
+                <option value="15">15</option>
+                <option value="16">16</option>
+            </select>
+        </div>
+
+        <div class="config-section">
+            <h3>Face Buttons</h3>
+            <div class="config-item">
+                <label>A Button</label>
+                <select id="config-btn-a" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>B Button</label>
+                <select id="config-btn-b" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>X Button</label>
+                <select id="config-btn-x" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Y Button</label>
+                <select id="config-btn-y" class="midi-cc-select"></select>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3>Shoulder Buttons</h3>
+            <div class="config-item">
+                <label>LB</label>
+                <select id="config-btn-lb" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>RB</label>
+                <select id="config-btn-rb" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>LT</label>
+                <select id="config-btn-lt" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>RT</label>
+                <select id="config-btn-rt" class="midi-cc-select"></select>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3>Center Buttons</h3>
+            <div class="config-item">
+                <label>Back</label>
+                <select id="config-btn-back" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Start</label>
+                <select id="config-btn-start" class="midi-cc-select"></select>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3>Stick Buttons</h3>
+            <div class="config-item">
+                <label>L3 (Left Stick)</label>
+                <select id="config-btn-l3" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>R3 (Right Stick)</label>
+                <select id="config-btn-r3" class="midi-cc-select"></select>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3>D-Pad</h3>
+            <div class="config-item">
+                <label>Up</label>
+                <select id="config-dpad-up" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Down</label>
+                <select id="config-dpad-down" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Left</label>
+                <select id="config-dpad-left" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Right</label>
+                <select id="config-dpad-right" class="midi-cc-select"></select>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h3>Analog Sticks (CC Mode)</h3>
+            <div class="config-item">
+                <label>Left X Axis</label>
+                <select id="config-axis-lx" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Left Y Axis</label>
+                <select id="config-axis-ly" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Right X Axis</label>
+                <select id="config-axis-rx" class="midi-cc-select"></select>
+            </div>
+            <div class="config-item">
+                <label>Right Y Axis</label>
+                <select id="config-axis-ry" class="midi-cc-select"></select>
+            </div>
+        </div>
+
+        <div class="config-section" style="padding-bottom: 30px;">
+            <button id="apply-config-btn" class="config-button save" style="width: 100%;">
+                Apply Configuration
             </button>
         </div>
     </div>

@@ -1,0 +1,393 @@
+/**
+ * MidiJoy Configurator Styles
+ */
+
+:root {
+    --bg-primary: #1a1a2e;
+    --bg-secondary: #16213e;
+    --bg-panel: #0f3460;
+    --accent: #e94560;
+    --accent-hover: #ff6b6b;
+    --text-primary: #eaeaea;
+    --text-secondary: #a0a0a0;
+    --success: #4ade80;
+    --warning: #fbbf24;
+    --border: #2a2a4a;
+    --input-bg: #1a1a3a;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body, html {
+    height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    overflow: hidden;
+}
+
+/* Main Layout */
+.main-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-layout {
+    display: flex;
+    height: 100%;
+    gap: 20px;
+    padding: 20px;
+}
+
+/* Left Panel - Joystick SVG */
+.left-panel {
+    flex: 0 0 40%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.left-panel svg {
+    max-width: 100%;
+    max-height: 100%;
+    height: auto;
+}
+
+/* SVG Button highlighting */
+.left-panel svg [data-button]:hover {
+    filter: brightness(1.3);
+    transition: filter 0.2s;
+}
+
+.left-panel svg .highlighted {
+    filter: drop-shadow(0 0 10px var(--accent));
+}
+
+/* Right Panel - Configuration */
+.right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* Header */
+.header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-right: auto;
+}
+
+/* Connection Status */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: var(--bg-secondary);
+    border-radius: 20px;
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+}
+
+.status-indicator.connected {
+    background: var(--success);
+    box-shadow: 0 0 8px var(--success);
+}
+
+.status-indicator.disconnected {
+    background: var(--accent);
+}
+
+.status-text {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Toolbar */
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* Buttons */
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-panel);
+    color: var(--text-primary);
+}
+
+.btn:hover:not(:disabled) {
+    background: var(--border);
+    transform: translateY(-1px);
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn-primary {
+    background: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+}
+
+.btn-success {
+    background: #059669;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #10b981;
+}
+
+.btn-warning {
+    background: #d97706;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #f59e0b;
+}
+
+/* Channel Selector */
+.channel-selector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 15px;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.channel-selector label {
+    font-weight: 500;
+}
+
+/* Tabs */
+.config-tabs {
+    display: flex;
+    gap: 5px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 5px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 6px 6px 0 0;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    color: var(--text-primary);
+    background: var(--bg-secondary);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    background: var(--bg-secondary);
+    border-bottom: 2px solid var(--accent);
+    margin-bottom: -7px;
+}
+
+/* Tab Content */
+.tab-content {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-pane {
+    display: none;
+    padding: 15px 0;
+}
+
+.tab-pane.active {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+/* Config Panels */
+.config-panel {
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    padding: 15px;
+    min-width: 250px;
+    flex: 1 1 250px;
+    max-width: 350px;
+}
+
+.config-panel h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent);
+}
+
+.panel-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Config Rows */
+.config-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.config-row label {
+    min-width: 100px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.range-row {
+    flex-wrap: wrap;
+}
+
+/* Form Elements */
+.config-select,
+.config-input {
+    flex: 1;
+    padding: 8px 12px;
+    background: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.config-select:focus,
+.config-input:focus {
+    border-color: var(--accent);
+}
+
+.config-input[type="number"] {
+    width: 70px;
+    flex: 0 0 70px;
+}
+
+/* Checkbox */
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+}
+
+/* Type Options Container */
+.type-options {
+    margin-top: 5px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .app-layout {
+        flex-direction: column;
+    }
+
+    .left-panel {
+        flex: 0 0 300px;
+    }
+
+    .right-panel {
+        flex: 1;
+        min-height: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .app-layout {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .toolbar {
+        width: 100%;
+    }
+
+    .config-panel {
+        min-width: 100%;
+        max-width: 100%;
+    }
+}

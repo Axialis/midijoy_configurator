@@ -3,14 +3,68 @@ const DEVICE_CONFIG = {
     baudRate: 115200
 };
 
+// SP404 MK2 CC Options for dropdown menus
+const SP404_CC_OPTIONS = [
+    { value: 0, name: 'CTRL1 (Effect Knob 1)' },
+    { value: 1, name: 'CTRL2 (Effect Knob 2)' },
+    { value: 2, name: 'CTRL3 (Effect Knob 3)' },
+    { value: 3, name: 'Bus 1 Assign' },
+    { value: 4, name: 'Bus 2 Assign' },
+    { value: 5, name: 'Bus 3 Assign' },
+    { value: 6, name: 'Bus 4 Assign' },
+    { value: 7, name: 'MFX Select' },
+    { value: 8, name: 'MFX On/Off' },
+    { value: 9, name: 'MFX Param 1' },
+    { value: 10, name: 'MFX Param 2' },
+    { value: 11, name: 'MFX Param 3' },
+    { value: 12, name: 'BPM Sync' },
+    { value: 13, name: 'Gate Mode' },
+    { value: 14, name: 'Loop Mode' },
+    { value: 15, name: 'Reverse' },
+    { value: 16, name: 'Roll' },
+    { value: 17, name: 'Fixed Velocity' },
+    { value: 18, name: 'Pad Mute' },
+    { value: 19, name: 'Pattern Select' },
+    { value: 20, name: 'Pattern Start' },
+    { value: 21, name: 'Pattern Stop' },
+    { value: 22, name: 'DJ Mode Enable' },
+    { value: 23, name: 'Input Level' },
+    { value: 24, name: 'Input FX Type' },
+    { value: 25, name: 'Count In' },
+    { value: 26, name: 'End Snap' },
+    { value: 27, name: 'Looper Record' },
+    { value: 28, name: 'Looper Overdub' },
+    { value: 29, name: 'Looper Undo' },
+    { value: 30, name: 'Looper Redo' },
+    { value: 127, name: 'Disabled' }
+];
+
 const MsgType = {
-    UPDATE_CONFIGURATION: 0,
-    CURRENT_CONFIGURATION: 1,
+    GAMEPAD_DATA: 0,          // Gamepad state data (axes, buttons)
+    CURRENT_CONFIGURATION: 1, // Configuration data response
     ERROR_FIFO_READ: 2,
     ERROR_PACKING_FAILED: 3,
     ERROR_TRANSPORT_FAILED: 4,
     ERROR_INVALID_DATA: 5,
-    ERROR_DEVICE_DISCONNECTED: 6
+    ERROR_DEVICE_DISCONNECTED: 6,
+    // Configuration protocol messages
+    GET_CONFIGURATION: 7,
+    SET_CONFIGURATION: 8,
+    SAVE_CONFIGURATION: 9,
+    RESET_CONFIGURATION: 10,
+    CONFIGURATION_SAVED: 11,
+    CONFIGURATION_ERROR: 12,
+    // Firmware info messages
+    GET_FIRMWARE_INFO: 13,
+    FIRMWARE_INFO: 14
+};
+
+// HDLC Protocol constants
+const HDLC = {
+    FRAME_START: 0x7E,
+    FRAME_END: 0x7F,
+    ESCAPE_CHAR: 0x7D,
+    XOR_VALUE: 0x20
 };
 
 // Gamepad Constants
@@ -365,10 +419,81 @@ function processBuffer() {
     serialBuffer = serialBuffer.slice(endIndex + 1);
 
     const parsedData = parseFrame(frame);
-    displayFrame(parsedData);
 
-    updateGamepadState(gamepadState, parsedData.slice(1));
-    console.log(gamepadState) // Print buttons state structure
+    if (parsedData.length === 0) return;
+
+    const msgType = parsedData[0];
+    const payload = parsedData.slice(1);
+
+    // Debug: log all incoming message types
+    console.debug(`Msg type=${msgType}, payload len=${payload.length}`);
+
+    switch (msgType) {
+        case MsgType.GAMEPAD_DATA:
+            // Gamepad data (axes, buttons)
+            displayFrame(parsedData);
+            updateGamepadState(gamepadState, payload);
+            break;
+
+        case MsgType.CURRENT_CONFIGURATION:
+            // Configuration data received from device
+            if (payload.length === 0) {
+                // Empty payload = confirmation that config was applied
+                console.log('Configuration applied confirmation');
+                updateDeviceStatus('Configuration applied!', false);
+            } else if (payload.length >= 93) {
+                // Full configuration data
+                console.log('Received configuration:', bytesToHex(payload));
+                const receivedConfig = bytesToConfig(Array.from(payload));
+                if (receivedConfig) {
+                    currentConfig = receivedConfig;
+                    loadConfigToUI(currentConfig);
+                    updateDeviceStatus('Configuration loaded', false);
+                } else {
+                    updateDeviceStatus('Invalid config data', true);
+                }
+            } else {
+                console.error('Config data too short:', payload.length);
+                updateDeviceStatus('Invalid config data (too short)', true);
+            }
+            break;
+
+        case MsgType.CONFIGURATION_SAVED:
+            console.log('Configuration saved to flash!');
+            updateDeviceStatus('Configuration saved!', false);
+            break;
+
+        case MsgType.CONFIGURATION_ERROR:
+            console.error('Configuration error from device');
+            updateDeviceStatus('Configuration error!', true);
+            break;
+
+        case MsgType.FIRMWARE_INFO:
+            // Firmware info: version (3 bytes) + build date/time string
+            if (payload.length >= 3) {
+                const major = payload[0];
+                const minor = payload[1];
+                const patch = payload[2];
+                const buildTimestamp = new TextDecoder().decode(payload.slice(3));
+                const firmwareInfo = `v${major}.${minor}.${patch} (${buildTimestamp.trim()})`;
+                console.log('Firmware:', firmwareInfo);
+                updateFirmwareDisplay(firmwareInfo);
+            }
+            break;
+
+        case MsgType.ERROR_FIFO_READ:
+        case MsgType.ERROR_PACKING_FAILED:
+        case MsgType.ERROR_TRANSPORT_FAILED:
+        case MsgType.ERROR_INVALID_DATA:
+        case MsgType.ERROR_DEVICE_DISCONNECTED:
+            console.error('Device error:', msgType);
+            displayFrame(parsedData);
+            break;
+
+        default:
+            console.log('Unknown message type:', msgType, 'Data:', bytesToHex(payload));
+            displayFrame(parsedData);
+    }
 }
 
 function parseFrame(frame) {
@@ -391,6 +516,7 @@ async function disconnectSerial() {
     try {
         if (reader) {
             await reader.cancel().catch(e => console.error('Reader cancel error:', e));
+            reader.releaseLock();
             reader = null;
         }
         if (serialPort) {
@@ -400,6 +526,72 @@ async function disconnectSerial() {
     } catch (error) {
         console.error('Disconnection Error:', error);
         throw error;
+    }
+}
+
+// Send data through serial with HDLC framing
+async function sendSerialData(msgType, data = []) {
+    if (!serialPort || !serialPort.writable) {
+        console.error('Serial port not connected');
+        return false;
+    }
+
+    try {
+        // Build message: [type] + [data...]
+        const message = [msgType, ...data];
+
+        // Apply HDLC framing with byte stuffing
+        const framedData = [];
+        framedData.push(HDLC.FRAME_START);
+
+        for (const byte of message) {
+            if (byte === HDLC.FRAME_START || byte === HDLC.FRAME_END || byte === HDLC.ESCAPE_CHAR) {
+                framedData.push(HDLC.ESCAPE_CHAR);
+                framedData.push(byte ^ HDLC.XOR_VALUE);
+            } else {
+                framedData.push(byte);
+            }
+        }
+
+        framedData.push(HDLC.FRAME_END);
+
+        const writer = serialPort.writable.getWriter();
+        await writer.write(new Uint8Array(framedData));
+        writer.releaseLock();
+
+        console.log('Sent:', bytesToHex(framedData));
+        return true;
+    } catch (error) {
+        console.error('Send Error:', error);
+        return false;
+    }
+}
+
+// Request configuration from device
+async function requestConfiguration() {
+    return sendSerialData(MsgType.GET_CONFIGURATION);
+}
+
+// Save configuration to device flash
+async function saveConfigurationToDevice() {
+    return sendSerialData(MsgType.SAVE_CONFIGURATION);
+}
+
+// Reset configuration to defaults
+async function resetConfigurationOnDevice() {
+    return sendSerialData(MsgType.RESET_CONFIGURATION);
+}
+
+// Request firmware info from device
+async function requestFirmwareInfo() {
+    return sendSerialData(MsgType.GET_FIRMWARE_INFO);
+}
+
+// Update firmware display
+function updateFirmwareDisplay(firmwareInfo) {
+    const firmwareElement = document.getElementById('firmware-version');
+    if (firmwareElement) {
+        firmwareElement.textContent = firmwareInfo;
     }
 }
 
@@ -413,6 +605,7 @@ function handleDisconnection() {
         status.style.color = 'black';
         serialPort = null;
         reader = null;
+        updateConfigButtons(false);
     });
 }
 
@@ -551,6 +744,7 @@ async function handleConnectButton() {
             await disconnectSerial();
             button.textContent = "Find Serial Device";
             status.textContent = "Disconnected";
+            updateConfigButtons(false);
             return;
         }
 
@@ -563,11 +757,16 @@ async function handleConnectButton() {
         const deviceName = await getDeviceName(port);
         button.textContent = "Disconnect";
         status.textContent = `Connected to: ${deviceName}`;
+        updateConfigButtons(true);
+
+        // Request firmware info on connection
+        setTimeout(() => requestFirmwareInfo(), 100);
     } catch (error) {
         console.error('Connection Error:', error);
         status.textContent = `Error: ${error.message}`;
         status.style.color = 'black';
         button.textContent = "Find Serial Device";
+        updateConfigButtons(false);
     } finally {
         button.disabled = false;
     }
@@ -599,12 +798,342 @@ function ensureJoystickIndicatorsExist() {
     }
 }
 
+// Enable/disable config buttons based on connection state
+function updateConfigButtons(enabled) {
+    document.getElementById('read-config-button').disabled = !enabled;
+    document.getElementById('save-config-button').disabled = !enabled;
+    document.getElementById('reset-config-button').disabled = !enabled;
+}
+
+// Button mapping types (must match firmware BTN_MAP_* enum)
+const BTN_MAP_TYPE = {
+    NOTE: 0,
+    CC_MOMENTARY: 1,
+    CC_TOGGLE: 2,
+    PAD: 3
+};
+
+// Configuration Panel Functions
+let configPanelOpen = false;
+let currentConfig = {
+    midiChannel: 1,
+    axes: {
+        lx: { cc_id: 0, min: 0, max: 127, invert: false, deadzone: 10 },
+        ly: { cc_id: 1, min: 0, max: 127, invert: false, deadzone: 10 },
+        rx: { cc_id: 2, min: 0, max: 127, invert: false, deadzone: 10 },
+        ry: { cc_id: 9, min: 0, max: 127, invert: false, deadzone: 10 }
+    },
+    buttons: {
+        // Order: x, a, b, y, lb, rb, lt, rt, back, start, l3, r3
+        x:     { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        a:     { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        b:     { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        y:     { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        lb:    { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        rb:    { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        lt:    { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        rt:    { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        back:  { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        start: { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        l3:    { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 },
+        r3:    { type: BTN_MAP_TYPE.CC_MOMENTARY, toggle: false, cc_id: 8 }
+    },
+    dpad: {
+        up:    { cc_id: 7, value_press: 127, value_release: 0 },
+        down:  { cc_id: 7, value_press: 127, value_release: 0 },
+        left:  { cc_id: 7, value_press: 127, value_release: 0 },
+        right: { cc_id: 7, value_press: 127, value_release: 0 }
+    }
+};
+
+function initConfigPanel() {
+    // Populate all CC select dropdowns
+    const selects = document.querySelectorAll('.midi-cc-select');
+    selects.forEach(select => {
+        SP404_CC_OPTIONS.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.value;
+            opt.textContent = option.name;
+            select.appendChild(opt);
+        });
+    });
+
+    // Set default values
+    loadConfigToUI(currentConfig);
+}
+
+function loadConfigToUI(config) {
+    document.getElementById('midi-channel').value = config.midiChannel;
+
+    // Helper to get CC ID from button
+    // Note: UI only supports CC_MOMENTARY mode, so for PAD/NOTE types show "Disabled"
+    const getButtonCcId = (btn) => {
+        if (btn.type === BTN_MAP_TYPE.CC_MOMENTARY || btn.type === BTN_MAP_TYPE.CC_TOGGLE) {
+            return btn.cc_id !== undefined ? btn.cc_id : 127;
+        }
+        // For PAD and NOTE types, show as "Disabled" since UI doesn't support them yet
+        return 127;
+    };
+
+    // Buttons (CC ID from button config - only CC types are supported in UI)
+    document.getElementById('config-btn-a').value = getButtonCcId(config.buttons.a);
+    document.getElementById('config-btn-b').value = getButtonCcId(config.buttons.b);
+    document.getElementById('config-btn-x').value = getButtonCcId(config.buttons.x);
+    document.getElementById('config-btn-y').value = getButtonCcId(config.buttons.y);
+    document.getElementById('config-btn-lb').value = getButtonCcId(config.buttons.lb);
+    document.getElementById('config-btn-rb').value = getButtonCcId(config.buttons.rb);
+    document.getElementById('config-btn-lt').value = getButtonCcId(config.buttons.lt);
+    document.getElementById('config-btn-rt').value = getButtonCcId(config.buttons.rt);
+    document.getElementById('config-btn-back').value = getButtonCcId(config.buttons.back);
+    document.getElementById('config-btn-start').value = getButtonCcId(config.buttons.start);
+    document.getElementById('config-btn-l3').value = getButtonCcId(config.buttons.l3);
+    document.getElementById('config-btn-r3').value = getButtonCcId(config.buttons.r3);
+
+    // D-Pad (CC ID)
+    document.getElementById('config-dpad-up').value = config.dpad.up.cc_id;
+    document.getElementById('config-dpad-down').value = config.dpad.down.cc_id;
+    document.getElementById('config-dpad-left').value = config.dpad.left.cc_id;
+    document.getElementById('config-dpad-right').value = config.dpad.right.cc_id;
+
+    // Axes (CC ID)
+    document.getElementById('config-axis-lx').value = config.axes.lx.cc_id;
+    document.getElementById('config-axis-ly').value = config.axes.ly.cc_id;
+    document.getElementById('config-axis-rx').value = config.axes.rx.cc_id;
+    document.getElementById('config-axis-ry').value = config.axes.ry.cc_id;
+}
+
+function getConfigFromUI() {
+    // Get values from UI and update currentConfig structure
+    const config = JSON.parse(JSON.stringify(currentConfig)); // Deep copy
+
+    config.midiChannel = parseInt(document.getElementById('midi-channel').value);
+
+    // Helper to update button - sets type to CC_MOMENTARY and cc_id
+    const updateButton = (btnName, elementId) => {
+        const cc_id = parseInt(document.getElementById(elementId).value);
+        config.buttons[btnName] = {
+            type: BTN_MAP_TYPE.CC_MOMENTARY,
+            toggle: false,
+            cc_id: cc_id
+        };
+    };
+
+    // Buttons - set type to CC_MOMENTARY and update CC ID
+    updateButton('x', 'config-btn-x');
+    updateButton('a', 'config-btn-a');
+    updateButton('b', 'config-btn-b');
+    updateButton('y', 'config-btn-y');
+    updateButton('lb', 'config-btn-lb');
+    updateButton('rb', 'config-btn-rb');
+    updateButton('lt', 'config-btn-lt');
+    updateButton('rt', 'config-btn-rt');
+    updateButton('back', 'config-btn-back');
+    updateButton('start', 'config-btn-start');
+    updateButton('l3', 'config-btn-l3');
+    updateButton('r3', 'config-btn-r3');
+
+    // D-Pad
+    config.dpad.up.cc_id = parseInt(document.getElementById('config-dpad-up').value);
+    config.dpad.down.cc_id = parseInt(document.getElementById('config-dpad-down').value);
+    config.dpad.left.cc_id = parseInt(document.getElementById('config-dpad-left').value);
+    config.dpad.right.cc_id = parseInt(document.getElementById('config-dpad-right').value);
+
+    // Axes
+    config.axes.lx.cc_id = parseInt(document.getElementById('config-axis-lx').value);
+    config.axes.ly.cc_id = parseInt(document.getElementById('config-axis-ly').value);
+    config.axes.rx.cc_id = parseInt(document.getElementById('config-axis-rx').value);
+    config.axes.ry.cc_id = parseInt(document.getElementById('config-axis-ry').value);
+
+    return config;
+}
+
+function configToBytes(config) {
+    // Pack configuration to match firmware format:
+    // 1 byte: channel
+    // 20 bytes: axes (4 × 5: cc_id, min, max, invert, deadzone)
+    // 60 bytes: buttons (12 × 5: type, toggle, data[3])
+    // 12 bytes: dpad (4 × 3: cc_id, value_press, value_release)
+    // Total: 93 bytes minimum
+
+    const bytes = [];
+
+    // Channel (1 byte)
+    bytes.push(config.midiChannel);
+
+    // Axes (4 × 5 = 20 bytes) - order: lx, ly, rx, ry
+    const axisOrder = ['lx', 'ly', 'rx', 'ry'];
+    for (const axis of axisOrder) {
+        const ax = config.axes[axis];
+        bytes.push(ax.cc_id);
+        bytes.push(ax.min);
+        bytes.push(ax.max);
+        bytes.push(ax.invert ? 1 : 0);
+        bytes.push(ax.deadzone);
+    }
+
+    // Buttons (12 × 5 = 60 bytes) - order: x, a, b, y, lb, rb, lt, rt, back, start, l3, r3
+    const buttonOrder = ['x', 'a', 'b', 'y', 'lb', 'rb', 'lt', 'rt', 'back', 'start', 'l3', 'r3'];
+    for (const btn of buttonOrder) {
+        const button = config.buttons[btn];
+        bytes.push(button.type);      // type
+        bytes.push(button.toggle ? 1 : 0); // toggle
+
+        // Data bytes depend on type
+        if (button.type === BTN_MAP_TYPE.NOTE) {
+            bytes.push(button.note || 60);      // note
+            bytes.push(button.velocity || 127); // velocity
+            bytes.push(0);                      // padding
+        } else if (button.type === BTN_MAP_TYPE.CC_MOMENTARY || button.type === BTN_MAP_TYPE.CC_TOGGLE) {
+            bytes.push(button.cc_id);   // cc_id
+            bytes.push(0);              // padding
+            bytes.push(0);              // padding
+        } else { // PAD
+            bytes.push(button.bank || 0);       // bank
+            bytes.push(button.pad || 0);        // pad
+            bytes.push(button.velocity || 127); // velocity
+        }
+    }
+
+    // D-Pad (4 × 3 = 12 bytes) - order: up, down, left, right
+    const dpadOrder = ['up', 'down', 'left', 'right'];
+    for (const dir of dpadOrder) {
+        const dpad = config.dpad[dir];
+        bytes.push(dpad.cc_id);
+        bytes.push(dpad.value_press);
+        bytes.push(dpad.value_release);
+    }
+
+    return bytes;
+}
+
+function bytesToConfig(bytes) {
+    // Parse firmware format (minimum 93 bytes)
+    if (bytes.length < 93) {
+        console.error('Config data too short:', bytes.length, 'expected 93+');
+        return null;
+    }
+
+    let offset = 0;
+
+    const config = {
+        midiChannel: bytes[offset++],
+        axes: {},
+        buttons: {},
+        dpad: {}
+    };
+
+    // Axes (4 × 5 = 20 bytes)
+    const axisOrder = ['lx', 'ly', 'rx', 'ry'];
+    for (const axis of axisOrder) {
+        config.axes[axis] = {
+            cc_id: bytes[offset++],
+            min: bytes[offset++],
+            max: bytes[offset++],
+            invert: bytes[offset++] !== 0,
+            deadzone: bytes[offset++]
+        };
+    }
+
+    // Buttons (12 × 5 = 60 bytes)
+    const buttonOrder = ['x', 'a', 'b', 'y', 'lb', 'rb', 'lt', 'rt', 'back', 'start', 'l3', 'r3'];
+    for (const btn of buttonOrder) {
+        const type = bytes[offset++];
+        const toggle = bytes[offset++] !== 0;
+        const data1 = bytes[offset++];
+        const data2 = bytes[offset++];
+        const data3 = bytes[offset++];
+
+        config.buttons[btn] = { type, toggle };
+
+        if (type === BTN_MAP_TYPE.NOTE) {
+            config.buttons[btn].note = data1;
+            config.buttons[btn].velocity = data2;
+        } else if (type === BTN_MAP_TYPE.CC_MOMENTARY || type === BTN_MAP_TYPE.CC_TOGGLE) {
+            config.buttons[btn].cc_id = data1;
+        } else { // PAD
+            config.buttons[btn].bank = data1;
+            config.buttons[btn].pad = data2;
+            config.buttons[btn].velocity = data3;
+        }
+    }
+
+    // D-Pad (4 × 3 = 12 bytes)
+    const dpadOrder = ['up', 'down', 'left', 'right'];
+    for (const dir of dpadOrder) {
+        config.dpad[dir] = {
+            cc_id: bytes[offset++],
+            value_press: bytes[offset++],
+            value_release: bytes[offset++]
+        };
+    }
+
+    return config;
+}
+
+function toggleConfigPanel() {
+    const panel = document.getElementById('config-panel');
+    configPanelOpen = !configPanelOpen;
+    if (configPanelOpen) {
+        panel.classList.add('open');
+    } else {
+        panel.classList.remove('open');
+    }
+}
+
+async function applyConfiguration() {
+    const config = getConfigFromUI();
+    currentConfig = config;
+
+    const configBytes = configToBytes(config);
+    console.log('Applying config:', config);
+    console.log('Config bytes:', bytesToHex(configBytes));
+
+    const success = await sendSerialData(MsgType.SET_CONFIGURATION, configBytes);
+    if (success) {
+        updateDeviceStatus('Configuration applied', false);
+    } else {
+        updateDeviceStatus('Failed to apply config', true);
+    }
+}
+
 // Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    const svg = await loadSVG('assets/images/joy.svg', 'svg-container');
-ensureJoystickIndicatorsExist();
+    await loadSVG('assets/images/joy.svg', 'svg-container');
+    ensureJoystickIndicatorsExist();
+
+    // Initialize config panel
+    initConfigPanel();
+
+    // Config panel toggle
+    document.getElementById('toggle-panel-btn').addEventListener('click', toggleConfigPanel);
+    document.getElementById('close-panel-btn').addEventListener('click', toggleConfigPanel);
+
+    // Apply config button
+    document.getElementById('apply-config-btn').addEventListener('click', applyConfiguration);
+
     const connectButton = document.getElementById('connect-button');
     connectButton.addEventListener('click', handleConnectButton);
+
+    // Config buttons
+    document.getElementById('read-config-button').addEventListener('click', async () => {
+        console.log('Requesting configuration...');
+        updateDeviceStatus('Reading config...', false);
+        await requestConfiguration();
+    });
+
+    document.getElementById('save-config-button').addEventListener('click', async () => {
+        console.log('Saving configuration to flash...');
+        updateDeviceStatus('Saving to flash...', false);
+        await saveConfigurationToDevice();
+    });
+
+    document.getElementById('reset-config-button').addEventListener('click', async () => {
+        if (confirm('Reset configuration to defaults?')) {
+            console.log('Resetting configuration...');
+            updateDeviceStatus('Resetting config...', false);
+            await resetConfigurationOnDevice();
+        }
+    });
 
     if (!('serial' in navigator)) {
         document.getElementById('device-status').textContent =

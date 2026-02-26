@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MidiJoy - Инструкция</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #64b5f6;
+            margin-top: 30px;
+        }
+        h3 {
+            color: #81c784;
+        }
+        .section {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        code {
+            background: #0f3460;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            color: #ffd700;
+        }
+        .tip {
+            background: #1b4332;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .warning {
+            background: #5c4033;
+            border-left: 4px solid #ff9800;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #444;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #0f3460;
+            color: #64b5f6;
+        }
+        tr:nth-child(even) {
+            background: #1a1a2e;
+        }
+        .button-demo {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 5px;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .btn-green { background: #4CAF50; color: white; }
+        .btn-purple { background: #9c27b0; color: white; }
+        .btn-blue { background: #2196F3; color: white; }
+        .btn-orange { background: #ff9800; color: white; }
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            padding: 12px 24px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .back-link:hover {
+            background: #45a049;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        li {
+            margin: 8px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>MidiJoy Configurator</h1>
+    <p>Веб-интерфейс для настройки MIDI-контроллера на базе геймпада Logitech F310</p>
+
+    <div class="section">
+        <h2>Быстрый старт</h2>
+        <ol>
+            <li>Подключите MidiJoy к компьютеру через USB</li>
+            <li>Откройте конфигуратор в браузере Chrome/Edge</li>
+            <li>Нажмите <span class="button-demo btn-green">Find MIDI Device</span></li>
+            <li>Выберите устройство в появившемся окне (обычно "USB Serial Device")</li>
+            <li>После подключения отобразится версия прошивки</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>Основные кнопки</h2>
+        <table>
+            <tr>
+                <th>Кнопка</th>
+                <th>Описание</th>
+            </tr>
+            <tr>
+                <td><span class="button-demo btn-green">Find MIDI Device</span></td>
+                <td>Подключиться к устройству / Отключиться</td>
+            </tr>
+            <tr>
+                <td><span class="button-demo btn-purple">Read Config</span></td>
+                <td>Прочитать текущую конфигурацию из устройства</td>
+            </tr>
+            <tr>
+                <td><span class="button-demo btn-blue">Save to Flash</span></td>
+                <td>Сохранить конфигурацию в EEPROM (сохранится после перезагрузки)</td>
+            </tr>
+            <tr>
+                <td><span class="button-demo btn-orange">Reset Defaults</span></td>
+                <td>Сбросить настройки на заводские</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Панель настроек (Settings)</h2>
+        <p>Нажмите кнопку <strong>Settings</strong> справа для открытия панели конфигурации.</p>
+
+        <h3>MIDI Channel</h3>
+        <p>Выберите MIDI-канал (1-16). По умолчанию используется канал 10 для совместимости с Roland SP-404 MK2.</p>
+
+        <h3>Face Buttons (A, B, X, Y)</h3>
+        <p>Настройка кнопок A, B, X, Y. Каждая кнопка отправляет MIDI CC сообщение при нажатии.</p>
+
+        <h3>Shoulder Buttons (LB, RB, LT, RT)</h3>
+        <p>Плечевые кнопки и триггеры. Работают аналогично Face Buttons.</p>
+
+        <h3>Center Buttons (Back, Start)</h3>
+        <p>Центральные кнопки геймпада.</p>
+
+        <h3>Stick Buttons (L3, R3)</h3>
+        <p>Нажатие на аналоговые стики.</p>
+
+        <h3>D-Pad</h3>
+        <p>Крестовина (вверх, вниз, влево, вправо).</p>
+
+        <h3>Analog Sticks (CC Mode)</h3>
+        <p>Аналоговые стики отправляют непрерывные MIDI CC значения:</p>
+        <ul>
+            <li><strong>Центр:</strong> значение ~64</li>
+            <li><strong>Крайнее положение:</strong> 0 или 127</li>
+        </ul>
+        <p>Идеально подходят для управления эффектами в реальном времени.</p>
+    </div>
+
+    <div class="section">
+        <h2>Доступные CC параметры</h2>
+        <table>
+            <tr>
+                <th>Параметр</th>
+                <th>Описание</th>
+            </tr>
+            <tr><td>CTRL1, CTRL2, CTRL3</td><td>Ручки эффектов</td></tr>
+            <tr><td>Bus 1-4 Assign</td><td>Назначение на шины</td></tr>
+            <tr><td>MFX Select / On/Off</td><td>Выбор и включение эффекта</td></tr>
+            <tr><td>MFX Param 1-3</td><td>Параметры мастер-эффекта</td></tr>
+            <tr><td>BPM Sync</td><td>Синхронизация BPM</td></tr>
+            <tr><td>Gate Mode</td><td>Режим гейта</td></tr>
+            <tr><td>Loop Mode</td><td>Режим лупа</td></tr>
+            <tr><td>Reverse</td><td>Реверс</td></tr>
+            <tr><td>Roll</td><td>Ролл</td></tr>
+            <tr><td>Disabled</td><td>Отключить кнопку</td></tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>Порядок работы</h2>
+        <ol>
+            <li>Подключитесь к устройству</li>
+            <li>Нажмите <strong>Read Config</strong> чтобы загрузить текущие настройки</li>
+            <li>Откройте панель <strong>Settings</strong></li>
+            <li>Измените нужные параметры</li>
+            <li>Нажмите <strong>Apply Configuration</strong> в панели настроек</li>
+            <li>Проверьте работу на SVG-изображении джойстика</li>
+            <li>Нажмите <strong>Save to Flash</strong> для сохранения в память устройства</li>
+        </ol>
+    </div>
+
+    <div class="tip">
+        <strong>Совет:</strong> Если вы не нажмёте "Save to Flash", настройки сбросятся после перезагрузки устройства.
+    </div>
+
+    <div class="warning">
+        <strong>Важно:</strong> Конфигуратор работает только в браузерах Chrome и Edge (требуется Web Serial API).
+    </div>
+
+    <div class="section">
+        <h2>Визуализация</h2>
+        <p>На главной странице отображается SVG-изображение геймпада. При нажатии кнопок на реальном джойстике, соответствующие элементы подсвечиваются на экране.</p>
+        <ul>
+            <li>Кнопки меняют цвет при нажатии</li>
+            <li>Стики показывают текущую позицию белой точкой</li>
+            <li>D-Pad подсвечивает активные направления</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>Решение проблем</h2>
+
+        <h3>Устройство не найдено</h3>
+        <ul>
+            <li>Убедитесь что MidiJoy подключён к USB</li>
+            <li>Попробуйте другой USB-порт</li>
+            <li>Используйте Chrome или Edge</li>
+        </ul>
+
+        <h3>Настройки не сохраняются</h3>
+        <ul>
+            <li>Нажмите "Save to Flash" после применения настроек</li>
+            <li>Дождитесь сообщения "Configuration saved!"</li>
+        </ul>
+
+        <h3>Неправильные значения после перезагрузки</h3>
+        <ul>
+            <li>Прошейте актуальную версию прошивки</li>
+            <li>Нажмите "Reset Defaults" и заново настройте</li>
+        </ul>
+    </div>
+
+    <a href="index.html" class="back-link">Вернуться к конфигуратору</a>
+</body>
+</html>
